@@ -1,15 +1,11 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { readdir, readFile } from "node:fs/promises";
-import { stdout } from "node:process";
-import YAML from "yaml";
-
-const __filename = fileURLToPath(import.meta.url);
-const workingDirectory = path.dirname(__filename);
+const { readdir, readFile } = require("fs").promises;
+const { resolve } = require("path");
+const { cwd, stdout } = require("process");
+const YAML = require("yaml");
 
 const pipeline = formatAsCSV(
   parseExposedServices(
-    parseFileServices(filterUnwantedPaths(getAllFilePaths(workingDirectory)))
+    parseFileServices(filterUnwantedPaths(getAllFilePaths(cwd())))
   )
 );
 
@@ -17,8 +13,7 @@ const pipeline = formatAsCSV(
   for await (const entry of pipeline) {
     stdout.write(entry);
   }
-})()
-// TODO review licenses of deps
+})();
 
 /**
  * Yields all files from the directory, recursively.
@@ -27,14 +22,13 @@ const pipeline = formatAsCSV(
 async function* getAllFilePaths(directory) {
   try {
     const paths = await readdir(directory, {
-      recursive: true,
       withFileTypes: true,
     });
 
     for (const path of paths) {
-      if (path.isFile()) {
-        yield `${path.path}/${path.name}`;
-      }
+      (await path.isDirectory())
+        ? yield* getAllFilePaths(resolve(directory, path.name))
+        : yield `${directory}/${path.name}`;
     }
   } catch (error) {
     console.error(error);
@@ -47,8 +41,10 @@ async function* getAllFilePaths(directory) {
  */
 async function* filterUnwantedPaths(pathIterable) {
   try {
+    const fileRegexp = /docker-compose.*\.yml$/;
+
     for await (const path of pathIterable) {
-      if (/docker-compose.*\.yml$/.test(path)) {
+      if (fileRegexp.test(path)) {
         yield path;
       }
     }
@@ -66,8 +62,7 @@ async function* parseFileServices(pathIterable) {
     for await (const path of pathIterable) {
       yield {
         path,
-        services: YAML.parse(await readFile(path, { encoding: "utf8" }))
-          .services,
+        services: YAML.parse(await readFile(path, { encoding: "utf8" })).services,
       };
     }
   } catch (error) {
@@ -86,7 +81,7 @@ async function* parseExposedServices(fileServicesIterable) {
         path: file.path,
         exposedServices: Object.entries(file.services).flatMap(
           ([name, declarations]) => {
-            return Object.hasOwn(declarations, "ports")
+            return declarations.hasOwnProperty("ports")
               ? [{ name, ports: declarations.ports.join(" and ") }]
               : [];
           }
