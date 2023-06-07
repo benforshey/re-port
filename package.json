@@ -12,6 +12,10 @@
   },
   "author": "Ben Forshey",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benforshey/re-port.git"
+  },
   "dependencies": {
     "yaml": "2.0.1"
   }
