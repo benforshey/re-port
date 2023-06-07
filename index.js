@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const { readdir, readFile } = require("fs").promises;
 const { resolve } = require("path");
 const { cwd, stdout } = require("process");
@@ -94,7 +96,7 @@ async function* parseExposedServices(fileServicesIterable) {
 }
 
 /**
- * Forats the path and exposed services as sparse CSV matrix.
+ * Formats the path and exposed services as sparse CSV matrix.
  * @param {Iterable} exposedServicesIterable
  */
 async function* formatAsCSV(exposedServicesIterable) {
