@@ -60,15 +60,26 @@ async function* filterUnwantedPaths(pathIterable) {
  * @param {Iterable} pathIterable
  */
 async function* parseFileServices(pathIterable) {
+  let errorPath;
+
   try {
     for await (const path of pathIterable) {
+      errorPath = path;
+
       yield {
         path,
-        services: YAML.parse(await readFile(path, { encoding: "utf8" })).services,
+        services: YAML.parse(await readFile(path, { encoding: "utf8" }))
+          .services,
       };
     }
   } catch (error) {
     console.error(error);
+
+    yield {
+      error,
+      path: errorPath,
+      services: {},
+    };
   }
 }
 
@@ -88,6 +99,7 @@ async function* parseExposedServices(fileServicesIterable) {
               : [];
           }
         ),
+        ...(file.error && { error: file.error }),
       };
     }
   } catch (error) {
@@ -101,8 +113,6 @@ async function* parseExposedServices(fileServicesIterable) {
  */
 async function* formatAsCSV(exposedServicesIterable) {
   try {
-    const headers = `PATH,SERVICE,PORTS`;
-
     for await (const service of exposedServicesIterable) {
       let serviceConfigs = ``;
 
@@ -110,7 +120,9 @@ async function* formatAsCSV(exposedServicesIterable) {
         serviceConfigs += `,${service.name},${service.ports}\n`;
       });
 
-      yield `${headers}\n${service.path},,\n${serviceConfigs}\n`;
+      yield !service.error
+        ? `PATH,SERVICE,PORTS\n${service.path},,\n${serviceConfigs}\n`
+        : `PATH,ERROR\n${service.path},"${service.error}"\n`;
     }
   } catch (error) {
     console.error(error);
