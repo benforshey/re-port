@@ -60,6 +60,7 @@ async function* filterUnwantedPaths(pathIterable) {
  * @param {Iterable} pathIterable
  */
 async function* parseFileServices(pathIterable) {
+  // TODO you're treating this error like a special thing, yet you handle errors in try/catch the whole way though the dataflow. ErrorHandler needs to be specific and a part of the data's flow. It is data, and it needs to flow along the entire pipeline. Make it an explicit part of the app...
   let errorPath;
 
   try {
@@ -113,6 +114,7 @@ async function* parseExposedServices(fileServicesIterable) {
  */
 async function* formatAsCSV(exposedServicesIterable) {
   try {
+    // TODO Man, this feels coupled. Why would a CSV formatter care about a service? Wouldn't it care about a column or a row or something?
     for await (const service of exposedServicesIterable) {
       let serviceConfigs = ``;
 
